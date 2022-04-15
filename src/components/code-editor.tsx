@@ -1,22 +1,63 @@
-import MonacoEditor from '@monaco-editor/react';
+import MonacoEditor, { EditorDidMount } from '@monaco-editor/react';
+import prettier from 'prettier';
+import parser from 'prettier/parser-babel';
+import { useRef } from 'react';
 
-const CodeEditor = () => {
+interface CodeEditorProps {
+  initialValue: string;
+  onChange(value: string): void;
+}
+
+const CodeEditor: React.FC<CodeEditorProps> = ({ onChange, initialValue }) => {
+  const editorRef = useRef<any>();
+
+  const onEditorDidMount: EditorDidMount = (getValue, monacoEditor) => {
+    editorRef.current = monacoEditor;
+    monacoEditor.onDidChangeModelContent(() => {
+      onChange(getValue());
+    });
+
+    monacoEditor.getModel()?.updateOptions({ tabSize: 2 });
+  };
+
+  const onFormatClick = () => {
+    // get the current text entered into the editor
+    const unformatted = editorRef.current.getModel().getValue();
+
+    // format the current text inside the editor
+    const formatted = prettier.format(unformatted, {
+      parser: 'babel',
+      plugins: [parser],
+      useTabs: false,
+      semi: true,
+      singleQuote: true,
+    });
+
+    // set the formatted text as the new text in the editor window
+    editorRef.current.setValue(formatted);
+  };
+
   return (
-    <MonacoEditor
-      theme='dark'
-      language='javascript'
-      height='500px'
-      options={{
-        wordWrap: 'on',
-        minimap: { enabled: false },
-        showUnused: false,
-        folding: false,
-        lineNumbersMinChars: 3,
-        fontSize: 16,
-        scrollBeyondLastLine: false,
-        automaticLayout: true,
-      }}
-    />
+    <div>
+      <button onClick={onFormatClick}>Format Code</button>
+      <MonacoEditor
+        editorDidMount={onEditorDidMount}
+        value={initialValue}
+        theme='dark'
+        language='javascript'
+        height='500px'
+        options={{
+          wordWrap: 'on',
+          minimap: { enabled: false },
+          showUnused: false,
+          folding: false,
+          lineNumbersMinChars: 3,
+          fontSize: 16,
+          scrollBeyondLastLine: false,
+          automaticLayout: true,
+        }}
+      />
+    </div>
   );
 };
 
